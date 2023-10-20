@@ -3,8 +3,14 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "=3.0.0"
+      version = "3.75.0"
     }
+  }
+  backend "azurerm" {
+    resource_group_name  = "StorageRG"
+    storage_account_name = "taskboardstoragemitak"
+    container_name       = "taskboardcontainer"
+    key                  = "terraform.tfstate"
   }
 }
 
@@ -36,17 +42,17 @@ resource "azurerm_linux_web_app" "alwa" {
   location            = azurerm_resource_group.rg.location
   service_plan_id     = azurerm_service_plan.asp.id
 
+  connection_string {
+    name  = "DefaultConnection"
+    type  = "SQLAzure"
+    value = "Data Source=tcp:${azurerm_mssql_server.sqlserver.fully_qualified_domain_name},1433;Initial Catalog=${azurerm_mssql_database.database.name};User ID=${azurerm_mssql_server.sqlserver.administrator_login};Password=${azurerm_mssql_server.sqlserver.administrator_login_password};Trusted_Connection=False; MultipleActiveResultSets=True;"
+  }
+
   site_config {
     application_stack {
       dotnet_version = "6.0"
     }
     always_on = false
-  }
-
-  connection_string {
-    name  = "DefaultConnection"
-    type  = "SQLAzure"
-    value = "Data Source=tcp:${azurerm_mssql_server.sqlserver.fully_qualified_domain_name},1433;Initial Catalog=${azurerm_mssql_database.database.name};User Id=${azurerm_mssql_server.sqlserver.administrator_login};Password=${azurerm_mssql_server.sqlserver.administrator_login_password};Trusted_Connection=False;MultipleActiveResultSets=True;"
   }
 }
 
@@ -67,10 +73,6 @@ resource "azurerm_mssql_database" "database" {
   max_size_gb    = 2
   sku_name       = "S0"
   zone_redundant = false
-
-  tags = {
-    foo = "bar"
-  }
 }
 
 resource "azurerm_mssql_firewall_rule" "fr" {
